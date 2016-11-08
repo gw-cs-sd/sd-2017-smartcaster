@@ -1,6 +1,8 @@
-import nflgame
+#import nflgame
+import NFLGCC
 import os
 #import nltk
+import shutil
 
 ## Roster (variable)
 P01 = 'J.Winston' #TB #QB
@@ -30,36 +32,32 @@ FLX = P09
 K = P14
 DEF = P15
 
+## Files.
+_FILE = 'weekPlays.csv'
+_NEW = 'weekPlays_new.csv'
+_TEMP = 'weekPlays_temp.csv'
+
 ## Settings (variable)
 team = [QB, RB1, RB2, WR1, WR2, TE, FLX, K, DEF]
-games = nflgame.games(2016, week=9)
-players = nflgame.combine_game_stats(games)
 
 ## Setup csv.
-nflgame.combine(nflgame.combine_plays(games)).csv('weekPlays.csv') ## store week's plays up until now
-
-## QB
-#for p in players: 
-#    if p.name == QB:
-#        msg = '%s : %d passing yards, %d completed out of %d attempts, %d passing TDs'
-#        print msg % (p, p.passing_yds, p.passing_cmp, p.passing_att, p.passing_tds)
+NFLGCC.retrieve_plays(2016, 9, _FILE)
 
 ## ### #### ##### RUNNING ##### #### ### ##
 while True:
-    games = nflgame.games(2016, week=9)
-    players = nflgame.combine_game_stats(games)
-
-    ## Create new temp file.
+    ## Create new temp file with header.
     os.system('head -n 1 weekPlays.csv > weekPlays_temp.csv')
 
-    nflgame.combine(nflgame.combine_plays(games)).csv('weekPlays_new.csv')
+    NFLGCC.retrieve_plays(2016, 9, _NEW)
+
     os.system('grep -vf weekPlays_new.csv weekPlays.csv >> weekPlays_temp.csv') # appends temp file with difference
-    #os.system('grep -vf weekPlays_new.csv weekPlays.csv') # print to console
+    os.system('grep -vf weekPlays_new.csv weekPlays.csv') # print to console
+    
     # do things
     #for p in players: 
 
     ## Update original weekPlays.csv once data is used.
-    #write new to original
-
-## PROBLEM WITH UPDATING NEW file
-## PLAN: CALL METHOD AGAIN TO REFRESH
+    #print "Closing %s" %_NEW
+    open(_FILE, 'w').close() # clears the main file
+    #print "Closed."
+    shutil.copy2(_NEW, _FILE) # copies contents of new file into old
