@@ -42,7 +42,7 @@ _TEMP = 'weekStats_temp.csv'
 team = [QB, RB1, RB2, WR1, WR2, TE, FLX, K, DEF]
 
 ## Setup csv.
-NFLGCC.retrieve_weej(2016, 9, _FILE)
+NFLGCC.retrieve_week(2016, 9, _FILE)
 #NFLGCC.retrieve_week_demo(2016, 9, _FILE) ## <----- DEMO VERSION
 
 
