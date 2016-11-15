@@ -2,6 +2,7 @@
 import NFLGCC
 import os
 #import nltk
+import SCNLPB
 import shutil
 
 ## Roster (variable)
@@ -33,30 +34,38 @@ K = P14
 DEF = P15
 
 ## Files.
-_FILE = 'weekPlays.csv'
-_NEW = 'weekPlays_new.csv'
-_TEMP = 'weekPlays_temp.csv'
+_FILE = 'weekStats.csv'
+_NEW = 'weekStats_new.csv'
+_TEMP = 'weekStats_temp.csv'
 
 ## Settings (variable)
 team = [QB, RB1, RB2, WR1, WR2, TE, FLX, K, DEF]
 
 ## Setup csv.
-NFLGCC.retrieve_plays(2016, 9, _FILE)
+NFLGCC.retrieve_weej(2016, 9, _FILE)
+#NFLGCC.retrieve_week_demo(2016, 9, _FILE) ## <----- DEMO VERSION
+
+
+#NFLGCC.retrieve_stats(_FILE) ## <----- TESTING
 
 ## ### #### ##### RUNNING ##### #### ### ##
 while True:
+    print "run"
     ## Create new temp file with header.
-    os.system('head -n 1 weekPlays.csv > weekPlays_temp.csv')
+    os.system('head -n 1 weekStats.csv > weekStats_temp.csv')
 
-    NFLGCC.retrieve_plays(2016, 9, _NEW)
+    NFLGCC.retrieve_week(2016, 9, _NEW)
+    #NFLGCC.retrieve_week_demo(2016, 9, _NEW) ## <----- DEMO VERSION
 
-    os.system('grep -vf weekPlays_new.csv weekPlays.csv >> weekPlays_temp.csv') # appends temp file with difference
-    os.system('grep -vf weekPlays_new.csv weekPlays.csv') # print to console
+    os.system('grep -vf weekStats.csv weekStats_new.csv >> weekStats_temp.csv') # appends temp file with difference
+    #os.system('grep -vf weekStats.csv weekStats_new.csv') # print to console
     
-    # do things
+    # do things with weekStats_temp.csv
     #for p in players: 
 
-    ## Update original weekPlays.csv once data is used.
+    NFLGCC.retrieve_stats(_TEMP) ## <----- TESTING
+
+    ## Update original weekStats.csv once data is used.
     #print "Closing %s" %_NEW
     open(_FILE, 'w').close() # clears the main file
     #print "Closed."
