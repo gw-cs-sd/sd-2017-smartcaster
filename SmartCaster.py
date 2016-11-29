@@ -1,72 +1,117 @@
-#import nflgame
-import NFLGCC
-import os
-#import nltk
-import SCNLPB
-import shutil
+import NFL
+from fHandler import fHandler
+from random import randint
 
-## Roster (variable)
-P01 = 'J.Winston' #TB #QB
-P02 = 'D.Freeman' #ATL #RB
-P03 = 'J.Ajayi' #MIA #RB
-P04 = 'F.Gore' #IND #RB
-P05 = 'D.Johnson' #CLE #RB
-P06 = 'J.Rodgers' #TB #RB
-P07 = 'T.Austin' #LA #RB
-P08 = 'D.Adams' #GB #WR
-P09 = 'R.Matthews' #TEN #WR
-P10 = 'A.Cooper' #OAK #WR
-P11 = 'J.Crowder' #WAS #WR
-P12 = 'B.LaFell' #CIN #WR
-P13 = 'J.Graham' #SEA #TE
-P14 = 'C.Sturgis' #PHI #K
-P15 = 'PHI' #DEF
+### Core text.
+txt = ''
 
-## Starting Lineup (variable)
-QB = P01
-RB1 = P02
-RB2 = P03
-WR1 = P07
-WR2 = P08
-TE = P13
-FLX = P09
-K = P14
-DEF = P15
+### Data files.
+f_game = 'exT-game.json'
+f_profile = 'exP-profile.json'
+f_roster = 'exT-roster.json'
+f_schedule = 'exT-schedule.json'
+f_stats = 'exP-stats.json'
 
-## Files.
-_FILE = 'weekStats.csv'
-_NEW = 'weekStats_new.csv'
-_TEMP = 'weekStats_temp.csv'
+### JSON strings.
+exP = ''
 
-## Settings (variable)
-team = [QB, RB1, RB2, WR1, WR2, TE, FLX, K, DEF]
+## MAIN / RUNNING FUNCTION
+def SC_RUN(_LAST, _FIRST, _POS, _TEAM, _YEAR, _WEEK):
+    _TYPE = SC_findType(_POS)
+    SC_IN(_LAST, _FIRST, _POS, _TYPE, _TEAM, _YEAR, _WEEK) # aggregate data
+    SC_construct(_LAST, _FIRST, _POS, _TYPE, _TEAM, _YEAR, _WEEK) # construct content
+    SC_PUBLISH() # publish content
 
-## Setup csv.
-NFLGCC.retrieve_week(2016, 9, _FILE)
-#NFLGCC.retrieve_week_demo(2016, 9, _FILE) ## <----- DEMO VERSION
+##### ##### ##### DATA PROCESSING ##### ##### #####
 
-
-#NFLGCC.retrieve_stats(_FILE) ## <----- TESTING
-
-## ### #### ##### RUNNING ##### #### ### ##
-while True:
-    print "run"
-    ## Create new temp file with header.
-    os.system('head -n 1 weekStats.csv > weekStats_temp.csv')
-
-    NFLGCC.retrieve_week(2016, 9, _NEW)
-    #NFLGCC.retrieve_week_demo(2016, 9, _NEW) ## <----- DEMO VERSION
-
-    os.system('grep -vf weekStats.csv weekStats_new.csv >> weekStats_temp.csv') # appends temp file with difference
-    #os.system('grep -vf weekStats.csv weekStats_new.csv') # print to console
+## Aggregate data through all inputs.
+def SC_IN(_LAST, _FIRST, _POS, _TYPE, _TEAM, _YEAR, _WEEK):
+    global exP
     
-    # do things with weekStats_temp.csv
-    #for p in players: 
+    ## Write all files.
+    exP = fHandler(f_stats, _LAST, _FIRST) ## FUNCTIONAL
+    NFL.retrieve_game(f_game, _TEAM, _YEAR, _WEEK) ## FUNCTIONAL
+    NFL.retrieve_profile(f_profile, exP.last, exP.first) ## FUNCTIONAL
+    #NFL.retrieve_team_roster(f_roster, _TEAM) ## FUNCTIONAL
+    #NFL.retrieve_team_schedule(f_schedule, _TEAM) ## FUNCTIONAL
+    NFL.retrieve_stats(exP.fn, _TYPE, exP.last, exP.first, _YEAR, _WEEK) ## FUNCTIONAL
 
-    NFLGCC.retrieve_stats(_TEMP) ## <----- TESTING
+## Determines relevant stats based on position.
+def SC_findType(_POS):
+    if(_POS == 'QB'):
+        return 'passing'
+    if(_POS == 'RB'):
+        return 'rushing'
+    if(_POS == 'WR'):
+        return 'receiving'
 
-    ## Update original weekStats.csv once data is used.
-    #print "Closing %s" %_NEW
-    open(_FILE, 'w').close() # clears the main file
-    #print "Closed."
-    shutil.copy2(_NEW, _FILE) # copies contents of new file into old
+## Prints out final text.
+## --> WILL PUBLISH TO DOCUMENT.
+def SC_PUBLISH():
+    print (txt)
+
+##### ##### ##### CONTENT CONSTRUCTION ##### ##### #####
+
+def SC_construct(_LAST, _FIRST, _POS, _TYPE, _TEAM, _YEAR, _WEEK):
+    global txt # access global text
+
+    ## Headline
+    txt += SC_headline(_LAST, _FIRST, _POS, _TYPE, _TEAM, _YEAR, _WEEK)
+    txt += '\n\n'
+
+    ## Summary
+    txt += SC_summary(_LAST, _FIRST, _POS, _TYPE, _TEAM, _YEAR, _WEEK)
+
+## Constructs article headline.
+def SC_headline(_LAST, _FIRST, _POS, _TYPE, _TEAM, _YEAR, _WEEK):
+    txt_head = '__ [NAME]\'s Week [WEEK] Performance __'
+
+    ## Puts together subject name.
+    _NAME = _FIRST + ' ' + _LAST
+
+    ## Substitute header info.
+    txt_head = txt_head.replace('[NAME]', _NAME)
+    txt_head = txt_head.replace('[WEEK]', _WEEK)
+
+    return txt_head
+
+## Determines what type of summary to construct.
+def SC_summary(_LAST, _FIRST, _POS, _TYPE, _TEAM, _YEAR, _WEEK):
+    if(_POS == 'QB'):
+        return SC_QB_summary(_LAST, _FIRST, _POS, _TYPE, _TEAM, _YEAR, _WEEK)
+
+##### ##### ##### SPECIFIED CONTENT CONSTRUCTION ##### ##### #####
+##### ##### CURRENTLY ONLY WORKING ON QBS ##### ##### #####
+
+## Constructs brief summary.
+def SC_QB_summary(_LAST, _FIRST, _POS, _TYPE, _TEAM, _YEAR, _WEEK):
+    ### PRIMARY CONTENT ###
+    txt_main = '[NAME] threw for [ADJ_1][YARDS] yards and [TD] touchdowns'
+
+    ## Substitute primary info.
+    txt_main = txt_main.replace('[NAME]', (_FIRST + ' ' + _LAST))
+    txt_main = txt_main.replace('[YARDS]', str(exP.get('passingYds')))
+    txt_main = txt_main.replace('[TD]', str(exP.get('passingTds')))
+
+    ## Correct grammar based on stats.
+    if(exP.get('passingYds') == 1):
+        txt_main = txt_main.replace('yards', 'yard')
+    if(exP.get('passingTds') == 1):
+        txt_main = txt_main.replace('touchdowns', 'touchdown')
+    
+    ## Statistically + probabalistically assign adjectives.
+    if(exP.get('passingYds') > 300):
+        if(randint(0,9) > 6): ## <--- WORK ON BETTER WAY TO ASSIGN ADJ
+            txt_main = txt_main.replace('[ADJ_1]', 'an astounding ')
+        else:
+            txt_main = txt_main.replace('[ADJ_1]', '')
+    txt_main = txt_main.replace('[ADJ_1]', '') # remove tag if still present
+
+    ### PRIMARY CONTENT CLAUSES ###
+    if(exP.get('passingInt') > 0):
+        txt_main += ' and ' + str(exP.get('passingInt')) + ' interception'
+        if(exP.get('passingInt') > 1):
+            txt_main += 's'
+
+    txt_main += '.'
+    return txt_main
