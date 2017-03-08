@@ -1,6 +1,6 @@
-### SOURCE : http://agiliq.com/blog/2009/06/generating-pseudo-random-text-with-markov-chains-u/ 
-
 import random
+
+### SOURCE : http://agiliq.com/blog/2009/06/generating-pseudo-random-text-with-markov-chains-u/ 
 
 class Markov_LINES(object):
 
@@ -20,7 +20,6 @@ class Markov_LINES(object):
         
         return content
     
-    ### REVISE TO N-TUPLES LATER
     ### Generates tuples from the given data.
     def tuples(self):
         if len(self.lines) < 3:

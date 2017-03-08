@@ -1,133 +1,92 @@
+import FileHandler
 import os
 import Markov_LINES
-import nltk
-from nltk.tag import pos_tag, map_tag
-import shutil
+import Markov_WORDS
+import OpenWeather
 
 ### Globals
-#token = [] # tokenized words
-#pos = [] # part-of-speech tags
+owm = '' # OnlineWeatherMap object
+report = "" # temporary 
 
 ### Existing
 F_INPUT = "FILES_IN" # directory of example texts as inputs
 
 ### Created
 F_SYNTAX = "syntax.txt" # acceptable grammatical syntax list
+F_EX = "ex.txt" # compiled example texts
 
 ##### ##### ##### ##### ##### ######################## ##### ##### ##### ##### #####
 ##### ##### ##### ##### ##### MAIN / RUNNING FUNCTIONS ##### ##### ##### ##### #####
 ##### ##### ##### ##### ##### ######################## ##### ##### ##### ##### #####
 
-def RUN():
-    CLEAR() # switch
-    SETUP()
-    FILES_IN(F_INPUT) # compile syntax from example texts
+### Runs program.
+### IF _SWITCH = 0, clear data before new run.
+### ELSE, build atop current data.
+### _KEY & _LOC : OWM API credentials.
+###     _KEY : OpenWeatherMap API key
+###     _LOC : specified location
+def RUN(_SWITCH, _KEY, _LOC):
+    if _SWITCH == 0:
+        CLEAR() # clears current data
 
-    ### TESTING
-    GENERATE_BODY_TEMPLATE(F_SYNTAX)
+    SETUP(_KEY, _LOC)
+    FileHandler.FILES_IN(F_INPUT, F_EX, F_SYNTAX) # compile syntax from example texts
+
+    ## Check functionality.
+    owm.RUN_FULL_TEST()
+
+    ### MARKOV TESTING
+    #GENERATE_BODY_TEMPLATE(F_SYNTAX)
+    #GENERATE_MARKOV_TEXT(F_EX)
 
 ### Resets program files.
 def CLEAR():
-    os.remove(F_SYNTAX)
+    if os.path.isfile(F_SYNTAX):
+        os.remove(F_SYNTAX)
+    if os.path.isfile(F_EX):
+        os.remove(F_EX)
 
-### Initializes all necessary variables.
-def SETUP():
+### Initializes all necessary files and variables.
+def SETUP(_KEY, _LOC):
+    global owm
+
+    ## Login to OWM API with key and location.
+    owm = OpenWeather.OpenWeather(_KEY, _LOC)
+
     ## Open syntax file; create if non-existent.
     try:
         file_content = open(F_SYNTAX, 'r')
     except FileNotFoundError:
         file_content = open(F_SYNTAX, 'w')
 
+    ## Open example text; create in non-existent.
+    try:
+        file_content = open(F_SYNTAX, 'r')
+    except FileNotFoundError:
+        file_content = open(F_SYNTAX, 'w')
+
 ##### ##### ##### ##### ##### ############### ##### ##### ##### ##### #####
-##### ##### ##### ##### ##### TEXT GENERATION ##### ##### ##### ##### #####
+##### ##### ##### ##### ##### MARKOV CHAINING ##### ##### ##### ##### #####
 ##### ##### ##### ##### ##### ############### ##### ##### ##### ##### #####
 
 ### Generates the syntax template for the content body.
+### BODY SIZE OPTION WITHIN OG METHOD
 def GENERATE_BODY_TEMPLATE(_FILE):
     M = Markov_LINES.Markov_LINES(_FILE)
     S = M.generate_body_template()
 
-    REMOVE_LINES_BEGINNING_WITH(_FILE, ".")
+    FileHandler.REMOVE_LINES_BEGINNING_WITH(_FILE, ".")
 
     ## Check functionality.
     print(S)
 
-##### ##### ##### ##### ##### ################ ##### ##### ##### ##### #####
-##### ##### ##### ##### ##### INPUT PROCESSING ##### ##### ##### ##### #####
-##### ##### ##### ##### ##### ################ ##### ##### ##### ##### #####
+### Generates a Markov text using the full example text.
+### TEXT SIZE OPTION WITHIN OG METHOD
+def GENERATE_MARKOV_TEXT(_FILE):
+    with open (_FILE, 'r') as f:
+        M = Markov_WORDS.Markov_WORDS(f)
+        S = M.generate_markov_text()
 
-### Takes a txt file as input and extracts its syntax.
-def FILE_IN(_FILE):
-    file_content = open(_FILE).read() # open file
-
-    ## Tokensize content and assign POS tags.
-    tokens = nltk.word_tokenize(file_content)
-    pos = nltk.pos_tag(tokens)
-    ## Universal tags (simple).
-    pos_SIMPLE = [(word, map_tag('en-ptb', 'universal', tag)) for word, tag in pos]
-
-    ## Check functionality. 
-    #print (tokens)
-    #print (pos)
-
-    #PARSE_SYNTAX(pos)
-    PARSE_SYNTAX(pos_SIMPLE)
-    #CLEAN_SYNTAX()
-
-### Takes a directory of texts files as input and extracts their syntax.
-def FILES_IN(_DIR):
-    ## Find all txt files within directory.
-    for file in os.listdir(_DIR):
-        if file.endswith(".txt"): 
-            FILE_IN(os.path.join(_DIR, file))
-    
-    #CLEAN_SYNTAX(F_SYNTAX)
-
-### Takes a list of POS-tagged words as input and adds to an accepted syntax list.
-def PARSE_SYNTAX(POS):
-    SYNTAX = "" # new syntax to add
-
-    ## Turn POS tags into string.
-    for i in POS:
-        SYNTAX += i[1] + " "
-        ## Begin new line after period.
-        if i[1] == ".":
-            SYNTAX += "\n"
-    
-    ## Insert syntax into file.
-    with open(F_SYNTAX, "a") as f:
-        f.write("\n")
-        f.write(SYNTAX)
-    
     ## Check functionality.
-    #print(SYNTAX)
+    print(S)
 
-### Removes duplicated and unwanted lines from the syntax file.
-### OPTION AT THE BOTTOM OF FILES_IN()
-def CLEAN_SYNTAX(_FILE):
-    ## Store and write back only unique lines.
-    UL = set(open(_FILE).readlines())
-    open(_FILE, "w").writelines(set(UL))
-    
-    ## Remove empty lines.
-    REMOVE_LINES_BEGINNING_WITH(_FILE, "\n")
-    REMOVE_LINES_BEGINNING_WITH(_FILE, " ")
-    REMOVE_LINES_BEGINNING_WITH(_FILE, ".")
-
-### Removes lines in file beginning with a specified string.
-### Useful for when a line begins with "\n" or ".".
-def REMOVE_LINES_BEGINNING_WITH(_FILE, _PRE):
-    ## Duplicate file to temporary file.
-    TEMP = "temp.txt"
-    shutil.copy2(_FILE, TEMP)
-
-    input = open(TEMP, "r")
-    output = open(_FILE, "w")
-
-    ## Exclude copying lines with prefix.
-    for i, line in enumerate(input):
-        if i == 0 or not line.lstrip().startswith(_PRE):
-            output.write(line)
-
-    ## Delete temporary file.
-    os.remove(TEMP)
