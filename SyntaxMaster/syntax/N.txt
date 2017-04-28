@@ -1,0 +1,6 @@
+city
+temperature
+humidity
+wind
+stock
+value
