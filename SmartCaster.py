@@ -21,6 +21,14 @@ class SmartCaster(object):
         report = self.assign_data_points_to_syntax(report)
         print (report)
         print ()
+        print ("!!! SC FILL SPACES WITH RANDOM_")
+        report = self.SM.assign_random_words_to_tags(report)
+        print (report)
+        print ()
+        print ("!!! SC FINAL REPORT_")
+        report = self.SM.clean_up_text(report)
+        print (report)
+        print ()
         self.SM.display_current_counters()
         print ()
 
@@ -36,13 +44,13 @@ class SmartCaster(object):
         ## Only mention pronoun once.
         self.SM.set_term_threshold_by_category("PN-PHRASE", 1, "phrase type")
 
-        ## Number of SUBJS items in domain --> START-PHRASE threshold in syntax.
-        SUBJS = self.DM.extract_subdomain(self.DM.get_domain_name(), "SUBJS")
-        self.SM.set_term_threshold_by_category("START-PHRASE", len(SUBJS), "phrase type")
+        ## Number of SUBJS items in domain --> SUBJ-PHRASE threshold in syntax.
+        SUBJS = self.DM.extract_subdomain(self.DM.get_domain(), "SUBJS")
+        self.SM.set_term_threshold_by_category("SUBJ-PHRASE", len(SUBJS), "phrase type")
 
         ## Construct syntax body with the given parameters.
-        # syntax = self.SM.generate_guided_syntax_given_start("START-PHRASE") # GUIDED : WIP
-        syntax = self.SM.generate_random_syntax_given_start("START-PHRASE") # RANDOM : PLACEHOLDER
+        syntax = self.SM.generate_guided_syntax_given_start("START-PHRASE") # GUIDED : WIP
+        #syntax = self.SM.generate_random_syntax_given_start("START-PHRASE") # RANDOM : PLACEHOLDER
 
         return (syntax)
     
@@ -57,10 +65,9 @@ class SmartCaster(object):
         ## Replace tags from value dictionary.
         content = self.SM.replace_tags_given_DICT(content, self.DM.get_value_dict())
 
-        return (content)
-    
-    ### CREATE DICTIONARY OF SUBJECTS WITH OTHER VALUES BENEATH 
-    ### EACH "SUB-DICT" CAN BE PASSED THROUGH THE REPLACE_TAGS_GIVEN_DICT TO CLUSTER INFO
-    #def 
+        ## Replace tags from value dictionary from SUBJ / subdomains.
+        for subj in self.DM.get_value_dict():
+            sd = self.DM.extract_subdomain(self.DM.get_value_dict(), subj)
+            content = self.SM.replace_tags_given_DICT(content, sd)
 
-    ### THEN WORK ON COUNTERS TO GUIDE CONSTRUCTION
+        return (content)

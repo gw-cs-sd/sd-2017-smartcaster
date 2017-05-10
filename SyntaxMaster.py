@@ -49,7 +49,8 @@ class SyntaxMaster(object):
     ### TESTING METHOD
     def TEST(self):
         self.display_current_counters() # before
-        print (self.generate_random_syntax_given_start("START-PHRASE"))
+        print (self.generate_random_syntax_given_start("START-PHRASE")) # RANDOM
+        #print (self.generate_guided_syntax_given_start("START-PHRASE")) # GUIDED
         print ()
         self.display_current_counters() # after
 
@@ -75,6 +76,119 @@ class SyntaxMaster(object):
 ##### ##### ##### ##### ##### SYNTAX ASSEMBLY + FORMATTING
 ##### ##### ##### ##### #####
 
+    ### Returns an expanded line of syntax guided by thresholds.
+    def generate_guided_syntax_given_start(self, S):
+        l = "[" + S + "]" # convert to tag for proper production state
+
+        syntax = self.assemble_phrase_given_line(l)
+
+        return (self.clean_up_text(syntax))
+    
+    ### Returns a sequence of parts-of-speech tags given a corresponding phrase type.
+    def assemble_phrase_given_line(self, LINE):
+        syntax = LINE
+        
+        ## If there are no phrase type tags in line, return.
+        if self.find_first_phrase_type_in_line(syntax) == "":
+            return (syntax)
+
+        first_phrase_type = self.find_first_phrase_type_in_line(syntax)
+        suggested_phrase = self.suggest_phrase_given_type(first_phrase_type)
+
+        syntax = syntax.replace("[" + first_phrase_type + "]", suggested_phrase)
+        print ("ASSEMBLY : " + syntax) # <<< TESTING >>>
+        return (self.assemble_phrase_given_line(syntax))
+
+    
+    ### Returns a phrase syntax sequence given a type based on threshold values.
+    def suggest_phrase_given_type(self, TYPE):
+        category = "phrase type"
+        fp = self.syntaxDIR + TYPE + ".txt"
+
+        ## Turn file into set of phrases.
+        phrase_set = set(map(str.strip, open(fp)))
+
+        ## Retrieve current phrase type counter list.
+        phrase_type_counter = self.get_counter_list_by_category(category)
+
+        ## Retrieve copy of phrase type counter list.
+        temp_phrase_type_counter = phrase_type_counter
+
+        ## Iterate over all items in set until something suitable is found.
+        for phrase in phrase_set:
+            ## Iterate over all words in selected phrase.
+            for index in phrase.split():
+                ## Iterate over all phrase types.
+                for term in temp_phrase_type_counter:
+                    ## Format phrase type term to tag.
+                    tag = "[" + term + "]"
+
+                    ## If the term is tag is present, increment the temp counter value.
+                    if tag == index:
+                        temp_phrase_type_counter[term] += 1
+            
+            ## Check additional counter values against thresholds.
+            exceeded = 0
+            for term in temp_phrase_type_counter:
+                if temp_phrase_type_counter[term] > self.get_term_threshold_by_category(term, category) and not self.get_term_threshold_by_category(term, category) == -1:
+                    exceeded = 1
+            
+            ## If success, return the phrase...
+            if exceeded == 0:
+                return (phrase)
+            else:
+                ## Reset temp counter.
+                temp_phrase_type_counter = phrase_type_counter
+        
+        print ("INVALID : could not find suitable syntax for " + TYPE + ". Empty string returned.")
+        return ("")
+
+    ### Returns the first phrase type tag to appear given a line.
+    def find_first_phrase_type_in_line(self, LINE):
+        l = LINE
+
+        PT = self.get_counter_list_by_category("phrase type")
+
+        ## Iterate over all words in line.
+        for index in l.split():
+            ## Iterate over all phrase types.
+            for term in PT:
+                ## Format phrase type to tag.
+                tag = "[" + term + "]"
+                ## If the phrase type is present, return the type.
+                if index == tag:
+                    return (term)
+        
+        ## If no phrase tags are present, return an empty string.
+        return ("")
+    
+    ### Returns a "cleaner" version of the string, eliminating unnecessary elements, whitespace, etc.
+    def clean_up_text(self, LINE):
+        l = LINE
+        
+        ## Remove all...
+        l = l.replace("[]", "") # empty tags
+        l = l.replace("  ", " ") # white space
+        l = l.replace(" ,", ",") # before punctuation
+        l = l.replace(" .", ".")
+
+        ## Capitalize...
+        l = l[0].upper() + l[1:] # the first letter of the text
+        
+        index = 0 
+        while index < len(l): # Capitalize the first letter in any sentence.
+            ## If there is a period, not part of an abbreviation, and not at the end...
+            if l[index] == "." and not l[index-2] == "." and index + 2 < len(l):
+                l = l[:index+2] + l[index+2].upper() + l[index+3:]
+
+            ## If there is an abbreviation...
+            if l[index] == "." and l[index-2] == ".":
+                l = l[:index-3] + l[index-3:index].upper() + l[index+1:]
+            
+            index = index + 1 # increment
+
+        return (l)
+
     ### Returns a modified line with tags substituted according to a given dictionary.
     ### PRIMARILY FOR EXTERNAL USE
     def replace_tags_given_DICT(self, LINE, DICT):
@@ -89,87 +203,9 @@ class SyntaxMaster(object):
             if tag in l:
                 print (l) # <<< TESTING >>>
                 ## Replace first instance.
-                l = l.replace(tag, DICT[term], 1)
+                l = l.replace(tag, str(DICT[term]), 1)
         
         return (l)
-
-    ### Replace first instance of tags given a dictionary.
-
-    ### Returns a modified line where the first phrast type tag located is replaced with a suggested phrase.
-    def assign_any_phrase_given_line(self, LINE):
-        category = "phrase type"
-        l = LINE
-
-        ## Locate first instance of a phrase type tag.
-        first_type = self.find_first_phrase_type(l)
-
-        print (l) # TESTING : TRACK LINE DEVELOPMENT
-
-        ## If the tag is empty.
-        if first_type == "":
-            return (l)
-        
-        ## Format phrase type into tag.
-        first_tag = "[" + first_type + "]"
-
-        ## Suggest new phrase to substitute for given phrase type.
-        suggestion = self.suggest_phrase_given_type(first_type)
-
-        ## Increment phrase type counter.
-        self.increment_term_counter_by_category(first_type, category) ## PHRASE TYPE COUNTER
-        print ("FIRST TYPE : " + first_type)
-
-        ## Return line with substitution.
-        return (l.replace(first_tag, suggestion, 1))
-
-    ### Returns the first identified phrase type tag in a given line.
-    def find_first_phrase_type(self, LINE):
-        category = "phrase type"
-        l = LINE
-
-        ## Iterate over all phrase type terms.
-        for term in self.get_counter_list_by_category(category):
-            ## Format phrase type to tag.
-            tag = "[" + term + "]"
-
-            ## If the phrase type is present, return the type.
-            if tag in l:
-                return (term)
-        
-        ## If no phrase type tags are present, return an empty string.
-        return ("")
-    
-    ### Returns a suggested phrase given a line and phrase type.
-    def suggest_phrase_given_type(self, TYPE):
-        category = "phrase type"
-
-        ## Replicate dictionary of phrase types and set all counters to zero.
-        temp_count = self.get_counter_list_by_category(category)
-        temp_count = self.set_all_DICT_values(temp_count, 0)
-
-        ## Randomly choose a phrase from type.
-        pick = self.pick_random_phrase_by_type(TYPE)
-        split_pick = pick.split()
-
-        ## Iterate through all possible phrase types.
-        for term in temp_count:
-            ## Format phrase type to tag.
-            tag = "[" + term + "]"
-
-            ## Count the number of times a phrase type tag appears in the line.
-            for item in split_pick:
-                if tag == item:
-                    ## Increment local counter is the term appears.
-                    temp_count[term] = temp_count[term] + 1
-
-            ## If selected output phrase content exceeds phrase type threshold,
-            ##  try assigning new phrase.
-            #if temp_count[term] + self.get_term_counter_by_category(term, category) >= self.get_term_threshold_by_category(term, category):
-            #    print (str(temp_count[term] + self.get_term_counter_by_category(term, category)) + " >= " + str(self.get_term_threshold_by_category(term, category)))
-            if self.has_term_counter_met_threshold_by_category(TYPE, category):
-                return (self.suggest_phrase_given_type(TYPE))
-            
-        return (pick)
 
 ##### ##### ##### ##### #####
 ##### ##### ##### ##### ##### GENERAL DICTIONARY HANDLING
@@ -366,3 +402,43 @@ class SyntaxMaster(object):
 
         ## Choose random line from file.
         return (random.choice(lines).rstrip())
+    
+    ### Returns a line where part-of-speech tags are replaced with randomly-chosen words.
+    def assign_random_words_to_tags(self, LINE):
+        category = "part-of-speech"
+        l = LINE
+
+        cleared = 0 # sets to 1 if no more available tags exist
+        while cleared == 0:
+            cleared = 1 # assume innocent until proven guilty
+
+            ## Iterate over all part-of-speech tags.
+            for term in self.get_counter_list_by_category(category):
+                ## Format term type to tag.
+                tag = "[" + term + "]"
+
+                if tag in l:
+                    cleared = 0
+                    
+                    ## If phrase type tag is present, replace first instance.
+                    pick = self.pick_random_word_by_POS(term)
+                    l = l.replace(tag, pick, 1)
+
+                    ## Increment based on term.
+                    self.increment_term_counter_by_category(term, category)
+        
+        return (l)
+    
+    ### Returns a random word given a part-of-speech.
+    def pick_random_word_by_POS(self, POS):
+        fp = self.syntaxDIR + POS + ".txt"
+
+        ## Choose random line in file.
+        lines = open(fp).read().splitlines()
+        line = random.choice(lines).rstrip()
+
+        ## Choose random word from line.
+        arr = line.split(",")
+        word = random.choice(arr)        
+
+        return (word)

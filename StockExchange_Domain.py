@@ -24,7 +24,7 @@ class StockExchange_Domain(DomainMaster):
         self.data = json.loads(self.raw)
 
         ## Update value dictionary.
-        self.update_value_dict(self.domain_name)
+        self.set_value_dict(self.domain)
 
     ### Retrieves specified stock data given a type term.
     def get_data_value(self, term):

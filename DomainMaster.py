@@ -55,7 +55,7 @@ class DomainMaster(object):
     
     ### Returns a given subdomain from a given domain.
     def extract_subdomain(self, d, sd):
-        return (self.get_domain()[sd])
+        return (d[sd])
 
     ### Sets the domain of operation given a domain.
     def set_domain(self, d):
@@ -82,30 +82,33 @@ class DomainMaster(object):
     
     ### Sets all available JSON dictionary terms with available data values.
     def set_value_dict(self, d):
-        self.values = self.retrieve_data_values_from_SUBJS(d)
 
-    ### Returns a dictionary of data values corresponding to the SUBJS of the domain.
-    def retrieve_data_values_from_SUBJS(self, d):
+        ##### ##### ##### SUBJS ##### ##### #####
+        
+        sd = self.extract_subdomain(d, "SUBJS")
+        subj_data = {}
+        
+        ## Iterate over SUBJS list and retrieve values of all SUBJ subdomains.
+        for subj in sd:
+            ## Insert SUBJ as top-level dictionary key and set term values beneath.
+            subj_data = self.retrieve_data_values_from_SUBJ(subj)
+            self.values[subj_data[0]] = subj_data[1]
+
+    ### Returns a tuple consisting of:
+    ###     [0] the SUBJ of this subdomain
+    ###     [1] dictionary of productions and data values corresponding to the SUBJ.
+    def retrieve_data_values_from_SUBJ(self, SUBJ):
         val_dict = {}
 
-        sd = self.extract_subdomain(d, "SUBJS")
+        ## Iterate across the values in this SUBJ.
+        for term in SUBJ:
+            if SUBJ[term]:
+                ## Insert term tags and corresponding productions in dictionary.
+                val_dict[term] = SUBJ[term]
 
-        ## Iterate across the SUBJS list in domain.
-        for item in sd:
-            ## Insert SUBJ as key, and retrieved data as value.
-            val_dict[item["SUBJ"]] = self.get_data_value(item["SUBJ"])
-
-        return (val_dict)
-    
-    ### Adds new keys to the value dictionary and updates existing ones.
-    ### USED IN CHILD CLASSES.
-    def update_value_dict(self, d):
-        val_dict = self.retrieve_data_values_from_SUBJS(d)
-
-        ## Iterate across terms in temporary value dictionary.
-        for item in val_dict:
-            ## Insert / update keys and values.
-            self.set_key_and_value(item, val_dict[item])
+        ## Retrieve corresponding data value.
+        val_dict["VALUE"] = self.get_data_value(SUBJ["SUBJ"])
+        return (SUBJ["SUBJ"], val_dict)
 
     ### Returns a value in the domain value dictionary given a key.
     def get_value_by_key(self, key):

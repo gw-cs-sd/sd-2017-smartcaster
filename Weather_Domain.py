@@ -29,7 +29,7 @@ class Weather_Domain(DomainMaster):
         self.weather = self.observation.get_weather()
 
         ## Update value dictionary.
-        self.update_value_dict(self.domain_name)
+        self.set_value_dict(self.get_domain())
 
     ### Retrieves specified weather data given a type term.
     def get_data_value(self, term):
@@ -38,7 +38,7 @@ class Weather_Domain(DomainMaster):
             val = self.weather.get_temperature('fahrenheit')['temp']
         elif term == "humidity":
             val = self.weather.get_humidity()
-        elif term == "wind":
+        elif term == "wind speed":
             val = self.weather.get_wind()['speed']
         else:
             return ("")
