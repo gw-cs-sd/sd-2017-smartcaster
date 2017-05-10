@@ -1,92 +1,73 @@
-import FileHandler
-import os
-import Markov_LINES
-import Markov_WORDS
-import OpenWeather
+import DomainSelect
+import SyntaxMaster
 
-### Globals
-owm = '' # OnlineWeatherMap object
-report = "" # temporary 
+### Class handles syntax construction by domain.
+class SmartCaster(object):
 
-### Existing
-F_INPUT = "FILES_IN" # directory of example texts as inputs
+    def __init__(self, d, PN):
+        ## Assign domain.
+        self.DS = DomainSelect.DomainSelect("domains/")
+        self.DM = self.DS.select_domain_and_pronoun(d, PN)
 
-### Created
-F_SYNTAX = "syntax.txt" # acceptable grammatical syntax list
-F_EX = "ex.txt" # compiled example texts
+        ## Assign syntax.
+        self.SM = SyntaxMaster.SyntaxMaster("syntax/")
 
-##### ##### ##### ##### ##### ######################## ##### ##### ##### ##### #####
-##### ##### ##### ##### ##### MAIN / RUNNING FUNCTIONS ##### ##### ##### ##### #####
-##### ##### ##### ##### ##### ######################## ##### ##### ##### ##### #####
+    def RUN(self):
+        print ("!!! SC CONSTRUCTION_")
+        report = self.generate_syntax_body_given_start("START-PHRASE")
+        print (report)
+        print ()
+        print ("!!! SC DICTIONARY TAGS_")
+        report = self.assign_data_points_to_syntax(report)
+        print (report)
+        print ()
+        print ("!!! SC FILL SPACES WITH RANDOM_")
+        report = self.SM.assign_random_words_to_tags(report)
+        print (report)
+        print ()
+        print ("!!! SC FINAL REPORT_")
+        report = self.SM.clean_up_text(report)
+        print (report)
+        print ()
+        self.SM.display_current_counters()
+        print ()
 
-### Runs program.
-### IF _SWITCH = 0, clear data before new run.
-### ELSE, build atop current data.
-### _KEY & _LOC : OWM API credentials.
-###     _KEY : OpenWeatherMap API key
-###     _LOC : specified location
-def RUN(_SWITCH, _KEY, _LOC):
-    if _SWITCH == 0:
-        CLEAR() # clears current data
+##### ##### ##### ##### #####
+##### ##### ##### ##### ##### CONTENT CONSTRUCTION / GENERATION
+##### ##### ##### ##### #####
 
-    SETUP(_KEY, _LOC)
-    FileHandler.FILES_IN(F_INPUT, F_EX, F_SYNTAX) # compile syntax from example texts
+    ### Defines syntax construction parameters to fit domain content.
+    ### Returns a sequence of syntax tags / template for the domain to fill.
+    def generate_syntax_body_given_start(self, S):
+        syntax = S
 
-    ## Check functionality.
-    owm.RUN_FULL_TEST()
+        ## Only mention pronoun once.
+        self.SM.set_term_threshold_by_category("PN-PHRASE", 1, "phrase type")
 
-    ### MARKOV TESTING
-    #GENERATE_BODY_TEMPLATE(F_SYNTAX)
-    #GENERATE_MARKOV_TEXT(F_EX)
+        ## Number of SUBJS items in domain --> SUBJ-PHRASE threshold in syntax.
+        SUBJS = self.DM.extract_subdomain(self.DM.get_domain(), "SUBJS")
+        self.SM.set_term_threshold_by_category("SUBJ-PHRASE", len(SUBJS), "phrase type")
 
-### Resets program files.
-def CLEAR():
-    if os.path.isfile(F_SYNTAX):
-        os.remove(F_SYNTAX)
-    if os.path.isfile(F_EX):
-        os.remove(F_EX)
+        ## Construct syntax body with the given parameters.
+        syntax = self.SM.generate_guided_syntax_given_start("START-PHRASE") # GUIDED : WIP
+        #syntax = self.SM.generate_random_syntax_given_start("START-PHRASE") # RANDOM : PLACEHOLDER
 
-### Initializes all necessary files and variables.
-def SETUP(_KEY, _LOC):
-    global owm
+        return (syntax)
+    
+    ### Takes a sequence of syntax tags and assigns them to corresponding data points.
+    ### Returns a string filled with the necessary information.
+    def assign_data_points_to_syntax(self, SYNTAX):
+        content = SYNTAX
 
-    ## Login to OWM API with key and location.
-    owm = OpenWeather.OpenWeather(_KEY, _LOC)
+        ## Replace tags from domain data.
+        content = self.SM.replace_tags_given_DICT(content, self.DM.get_domain())
 
-    ## Open syntax file; create if non-existent.
-    try:
-        file_content = open(F_SYNTAX, 'r')
-    except FileNotFoundError:
-        file_content = open(F_SYNTAX, 'w')
+        ## Replace tags from value dictionary.
+        content = self.SM.replace_tags_given_DICT(content, self.DM.get_value_dict())
 
-    ## Open example text; create in non-existent.
-    try:
-        file_content = open(F_SYNTAX, 'r')
-    except FileNotFoundError:
-        file_content = open(F_SYNTAX, 'w')
+        ## Replace tags from value dictionary from SUBJ / subdomains.
+        for subj in self.DM.get_value_dict():
+            sd = self.DM.extract_subdomain(self.DM.get_value_dict(), subj)
+            content = self.SM.replace_tags_given_DICT(content, sd)
 
-##### ##### ##### ##### ##### ############### ##### ##### ##### ##### #####
-##### ##### ##### ##### ##### MARKOV CHAINING ##### ##### ##### ##### #####
-##### ##### ##### ##### ##### ############### ##### ##### ##### ##### #####
-
-### Generates the syntax template for the content body.
-### BODY SIZE OPTION WITHIN OG METHOD
-def GENERATE_BODY_TEMPLATE(_FILE):
-    M = Markov_LINES.Markov_LINES(_FILE)
-    S = M.generate_body_template()
-
-    FileHandler.REMOVE_LINES_BEGINNING_WITH(_FILE, ".")
-
-    ## Check functionality.
-    print(S)
-
-### Generates a Markov text using the full example text.
-### TEXT SIZE OPTION WITHIN OG METHOD
-def GENERATE_MARKOV_TEXT(_FILE):
-    with open (_FILE, 'r') as f:
-        M = Markov_WORDS.Markov_WORDS(f)
-        S = M.generate_markov_text()
-
-    ## Check functionality.
-    print(S)
-
+        return (content)

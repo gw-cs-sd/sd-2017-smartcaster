@@ -1,0 +1,9 @@
+{
+    "PN-PREP" : "in",
+    "SUBJS" :
+        [
+            { "SUBJ" : "temperature", "VALUE-UNIT" : "F" },
+            { "SUBJ" : "humidity", "VALUE-UNIT" : "" },
+            { "SUBJ" : "wind", "VALUE-UNIT" : "mph" }
+        ]
+}
