@@ -1,7 +1,0 @@
-pretty,cute
-old,aged
-smart,intelligent
-hot,scorching,searing,blistering,sweltering
-cold,chilly,freezing,frigid
-warm,mild,temperate,tepid
-cool,chill,bracing,brisk,fresh
